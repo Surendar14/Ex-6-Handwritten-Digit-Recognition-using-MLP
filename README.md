@@ -1,82 +1,137 @@
 # Ex-6-Handwritten Digit Recognition using MLP
-## Aim:
-      To Recognize the Handwritten Digits using Multilayer perceptron.
-##  EQUIPMENTS REQUIRED:
-Hardware – PCs
-Anaconda – Python 3.7 Installation / Google Colab /Jupiter Notebook.
+### Aim:
+       To Recognize the Handwritten Digits using Multilayer perceptron.
+###  EQUIPMENTS REQUIRED:
 
-## Algorithm :
-Step 1:Import the required libraries: numpy, pandas, MLPClassifier, train_test_split, StandardScaler, accuracy_score, and matplotlib.pyplot.
+Hardware – PCs Anaconda – Python 3.7 Installation / Google Colab /Jupiter Notebook
 
-Step 2:Load the heart disease dataset from a file using pd.read_csv().
+### Algorithm :
+### step 1.
+Import the necessary libraries of python.
 
-Step 3:Separate the features and labels from the dataset using data.iloc values for features (X) and data.iloc[:, -1].values for labels (y).
+### step 2.
+In the end_to_end function, first calculate the similarity between the inputs and the peaks. Then, to find w used the equation Aw= Y in matrix form. Each row of A (shape: (4, 2)) consists of
 
-Step 4:Split the dataset into training and testing sets using train_test_split().
+### step  3.
+index[0]: similarity of point with peak1 index[1]: similarity of point with peak2 index[2]: Bias input (1) Y: Output associated with the input (shape: (4, )) W is calculated using the same equation we use to solve linear regression using a closed solution (normal equation).
 
-Step 5:Normalize the feature data using StandardScaler() to scale the features to have zero mean and unit variance.
+### step  4.
+This part is the same as using a neural network architecture of 2-2-1, 2 node input (x1, x2) (input layer) 2 node (each for one peak) (hidden layer) 1 node output (output layer)
 
-Step 6:Create an MLPClassifier model with desired architecture and hyperparameters, such as hidden_layer_sizes, max_iter, and random_state.
-
-Step 7:Train the MLP model on the training data using mlp.fit(X_train, y_train). The model adjusts its weights and biases iteratively to minimize the training loss.
-
-Step 8:Make predictions on the testing set using mlp.predict(X_test).
-
-Step 9:Evaluate the model's accuracy by comparing the predicted labels (y_pred) with the actual labels (y_test) using accuracy_score().
-
-Step 10:Print the accuracy of the model.
-
-Step 11:Plot the error convergence during training using plt.plot() and plt.show().
-
-## Program:
+###  step 5.
+To find the weights for the edges to the 1-output unit. Weights associated would be: edge joining 1st node (peak1 output) to the output node edge joining 2nd node (peak2 output) to the output node bias edge
+### Program:
 ```
-Devoleped by: Surendar S
-Reg no:212220230051
+Developed By : Surendar S
+Reg No: 212220230051
 ```
 ```python
 import numpy as np
 import pandas as pd
-from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
+data = pd.read_csv("train.csv")
+data = np.array(data)
+m, n = data.shape
+np.random.shuffle(data)
+data_dev = data[0:1000].T
+Y_dev = data_dev[0]
+X_dev = data_dev[1:n]
+X_dev = X_dev / 255
+data_train = data[1000:m].T
+Y_train = data_train[0]
+X_train = data_train[1:n]
+X_train = X_train / 255.
+_,m_train = X_train.shape
+Y_train
+def init_params():
+    W1 = np.random.rand(10, 784) - 0.5
+    b1 = np.random.rand(10, 1) - 0.5
+    W2 = np.random.rand(10, 10) - 0.5
+    b2 = np.random.rand(10, 1) - 0.5
+    return W1, b1, W2, b2
 
-#Load the dataset
-data=pd.read_csv('heart.csv')
+def ReLU(Z):
+    return np.maximum(Z, 0)
 
-#Separate features and labels
-x=data.iloc[:,:-1].values
-y=data.iloc[:,-1].values
+def softmax(Z):
+    A = np.exp(Z) / sum(np.exp(Z))
+    return A
+    
+def forward_prop(W1, b1, W2, b2, X):
+    Z1 = W1.dot(X) + b1
+    A1 = ReLU(Z1)
+    Z2 = W2.dot(A1) + b2
+    A2 = softmax(Z2)
+    return Z1, A1, Z2, A2
 
-#Split the dataset into training and testing sets
-x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+def ReLU_deriv(Z):
+    return Z > 0
 
-#Normalize the feature data
-scaler=StandardScaler()
-x_train=scaler.fit_transform(x_train)
-x_test=scaler.transform(x_test)
+def one_hot(Y):
+    one_hot_Y = np.zeros((Y.size, Y.max() + 1))
+    one_hot_Y[np.arange(Y.size), Y] = 1
+    one_hot_Y = one_hot_Y.T
+    return one_hot_Y
 
-#Create and train the MLP model
-mlp=MLPClassifier(hidden_layer_sizes=(100,100),max_iter=1000,random_state=42)
-training_loss=mlp.fit(x_train,y_train).loss_curve_
+def backward_prop(Z1, A1, Z2, A2, W1, W2, X, Y):
+    one_hot_Y = one_hot(Y)
+    dZ2 = A2 - one_hot_Y
+    dW2 = 1 / m * dZ2.dot(A1.T)
+    db2 = 1 / m * np.sum(dZ2)
+    dZ1 = W2.T.dot(dZ2) * ReLU_deriv(Z1)
+    dW1 = 1 / m * dZ1.dot(X.T)
+    db1 = 1 / m * np.sum(dZ1)
+    return dW1, db1, dW2, db2
 
-#Make prediction on the testing set
-y_pred=mlp.predict(x_test)
+def update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha):
+    W1 = W1 - alpha * dW1
+    b1 = b1 - alpha * db1    
+    W2 = W2 - alpha * dW2  
+    b2 = b2 - alpha * db2    
+    return W1, b1, W2, b2
+    def get_predictions(A2):
+    return np.argmax(A2, 0)
 
-#Evaluate the model
-accuracy=accuracy_score(y_test,y_pred)
-print('Accuracy:',accuracy)
+def get_accuracy(predictions, Y):
+    print(predictions, Y)
+    return np.sum(predictions == Y) / Y.size
 
-#PLot the error convergence
-plt.plot(training_loss)
-plt.title("MLP Training Loss Convergence")
-plt.xlabel("Iteration")
-plt.ylabel("Training Loss")
-plt.show()
-```
-## Output :
-![image](https://github.com/JayanthYadav123/Ex-6-Handwritten-Digit-Recognition-using-MLP/assets/94836154/d454506b-c402-430c-a71d-e0df37cd7198)
+def gradient_descent(X, Y, alpha, iterations):
+    W1, b1, W2, b2 = init_params()
+    for i in range(iterations):
+        Z1, A1, Z2, A2 = forward_prop(W1, b1, W2, b2, X)
+        dW1, db1, dW2, db2 = backward_prop(Z1, A1, Z2, A2, W1, W2, X, Y)
+        W1, b1, W2, b2 = update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha)
+        if i % 10 == 0:
+            print("Iteration: ", i)
+            predictions = get_predictions(A2)
+      test_prediction(0, W1, b1, W2, b2)print(get_accuracy(predictions, Y))
+    return W1, b1, W2, b2
+    W1, b1, W2, b2 = gradient_descent(X_train, Y_train, 0.10, 500)
+    def make_predictions(X, W1, b1, W2, b2):
+    A2 = forward_prop(W1, b1, W2, b2, X)
+    predictions = get_predictions(A2)
+    return predictions
 
-## Result:
- Thus, an ANN with MLP is constructed and trained to predict the heart attack using python.
+def test_prediction(index, W1, b1, W2, b2):
+    current_image = X_train[:, index, None]
+    prediction = make_predictions(X_train[:, index, None], W1, b1, W2, b2)
+    label = Y_train[index]
+    print("Prediction: ", prediction)
+    print("Label: ", label)
+    
+    current_image = current_image.reshape((28, 28)) * 255
+    plt.gray()
+    plt.imshow(current_image, interpolation='nearest')
+    plt.show()
+    test_prediction(0, W1, b1, W2, b2)
+ ```
+### Output :
+![j1](https://user-images.githubusercontent.com/103946827/204096292-a63de1a8-2012-455b-8d17-24dadb7b411c.png)
+![j2](https://user-images.githubusercontent.com/103946827/204096292-a63de1a8-2012-455b-8d17-24dadb7b411c.png)
+![j3](https://user-images.githubusercontent.com/103946827/204096366-0dc483fe-1c97-418a-8be2-a3c71a7fe0c3.png)
+![j4](https://user-images.githubusercontent.com/103946827/204096393-3d4f3adb-7300-43c3-b30e-9ccdde9140b0.png)
+![j5](https://user-images.githubusercontent.com/103946827/204096428-b9379c37-25d9-4321-9592-3274b2a2b848.png)
+
+### Result:
+Thus The Implementation of Handwritten Digit Recognition using MLP Is Executed Successfully
